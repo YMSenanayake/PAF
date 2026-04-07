@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
     // By extending JpaRepository, Spring Boot automatically gives you built-in methods 
     // to save(), findAll(), findById(), and delete() users without writing any SQL!
+    User findByEmail(String email);
 }
