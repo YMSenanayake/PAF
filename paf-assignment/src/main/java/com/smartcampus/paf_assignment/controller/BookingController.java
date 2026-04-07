@@ -60,4 +60,45 @@ public class BookingController {
         Booking savedBooking = bookingRepository.save(bookingRequest);
         return new ResponseEntity<>(savedBooking, HttpStatus.CREATED);
     }
+
+    // 2. GET ALL BOOKINGS (For Admin view)
+    @GetMapping
+    public ResponseEntity<List<Booking>> getAllBookings() {
+        return new ResponseEntity<>(bookingRepository.findAll(), HttpStatus.OK);
+    }
+
+    // 3. GET BOOKINGS FOR A SPECIFIC USER
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Booking>> getUserBookings(@PathVariable Long userId) {
+        List<Booking> userBookings = bookingRepository.findByUser_UserId(userId);
+        return new ResponseEntity<>(userBookings, HttpStatus.OK);
+    }
+
+    // 4. UPDATE BOOKING STATUS (Approve, Reject, or Cancel)
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateBookingStatus(
+            @PathVariable Long id,
+            @RequestParam String status,
+            @RequestParam(required = false) String adminReason) {
+        
+        Optional<Booking> optionalBooking = bookingRepository.findById(id);
+        
+        if (optionalBooking.isEmpty()) {
+            return new ResponseEntity<>("Error: Booking not found.", HttpStatus.NOT_FOUND);
+        }
+
+        Booking booking = optionalBooking.get();
+        
+        // Convert status to uppercase to maintain database consistency
+        String newStatus = status.toUpperCase();
+        booking.setStatus(newStatus);
+        
+        // If an admin rejects the booking, save the reason
+        if ("REJECTED".equals(newStatus) && adminReason != null) {
+            booking.setAdminReason(adminReason);
+        }
+
+        Booking updatedBooking = bookingRepository.save(booking);
+        return new ResponseEntity<>(updatedBooking, HttpStatus.OK);
+    }
 }
