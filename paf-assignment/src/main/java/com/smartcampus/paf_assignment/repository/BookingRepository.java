@@ -26,4 +26,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
     // Find all bookings for a specific user
     List<Booking> findByUser_UserId(Long userId);
+
+    // Find all bookings for a specific resource (used for cascade delete)
+    List<Booking> findByResource_ResourceId(Long resourceId);
 }

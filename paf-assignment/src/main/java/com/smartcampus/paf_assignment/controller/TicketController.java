@@ -1,8 +1,10 @@
 package com.smartcampus.paf_assignment.controller;
 
+import com.smartcampus.paf_assignment.entity.Notification;
 import com.smartcampus.paf_assignment.entity.Resource;
 import com.smartcampus.paf_assignment.entity.Ticket;
 import com.smartcampus.paf_assignment.entity.User;
+import com.smartcampus.paf_assignment.repository.NotificationRepository;
 import com.smartcampus.paf_assignment.repository.ResourceRepository;
 import com.smartcampus.paf_assignment.repository.TicketRepository;
 import com.smartcampus.paf_assignment.repository.UserRepository;
@@ -39,6 +41,16 @@ public class TicketController {
     @Autowired
     private TicketAttachmentRepository attachmentRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    private void sendNotification(User user, String message) {
+        Notification notif = new Notification();
+        notif.setUser(user);
+        notif.setMessage(message);
+        notificationRepository.save(notif);
+    }
+
     // The folder where images will be saved inside your project
     private static final String UPLOAD_DIR = "uploads/";
 
@@ -55,18 +67,44 @@ public class TicketController {
         ticketRequest.setUser(user.get());
         ticketRequest.setResource(resource.get());
         ticketRequest.setStatus("OPEN"); // Tickets always start as OPEN
-        
+
         Ticket savedTicket = ticketRepository.save(ticketRequest);
+
+        // ── Notify all ADMINs and TECHNICIANs about the new ticket ──────────
+        String resourceName = resource.get().getName();
+        String reporterName = user.get().getFullName();
+        String priority     = ticketRequest.getPriority() != null ? ticketRequest.getPriority() : "NORMAL";
+        String notifMsg = "🎫 New " + priority + " priority ticket for \"" + resourceName
+                + "\" reported by " + reporterName + ".";
+
+        List<User> staff = new java.util.ArrayList<>();
+        staff.addAll(userRepository.findByRole("ADMIN"));
+        staff.addAll(userRepository.findByRole("TECHNICIAN"));
+        staff.forEach(staffUser -> sendNotification(staffUser, notifMsg));
+
         return new ResponseEntity<>(savedTicket, HttpStatus.CREATED);
     }
 
-    // 2. GET ALL TICKETS (GET)
+    // 2. GET ALL TICKETS (Admin/Technician)
     @GetMapping
     public ResponseEntity<List<Ticket>> getAllTickets() {
         return new ResponseEntity<>(ticketRepository.findAll(), HttpStatus.OK);
     }
 
-    // 3. TECHNICIAN UPDATE STATUS & NOTES (PUT)
+    // 2b. GET TICKETS FOR A SPECIFIC USER (Regular users see only their own)
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Ticket>> getUserTickets(@PathVariable Long userId) {
+        return new ResponseEntity<>(ticketRepository.findByUser_UserId(userId), HttpStatus.OK);
+    }
+
+    // 3b. GET ATTACHMENTS FOR A TICKET
+    @GetMapping("/{id}/attachments")
+    public ResponseEntity<List<TicketAttachment>> getAttachments(@PathVariable Long id) {
+        List<TicketAttachment> attachments = attachmentRepository.findByTicket_TicketId(id);
+        return new ResponseEntity<>(attachments, HttpStatus.OK);
+    }
+
+    // 4. TECHNICIAN UPDATE STATUS & NOTES (PUT)
     @PutMapping("/{id}/resolve")
     public ResponseEntity<?> updateTicketStatus(
             @PathVariable Long id, 
@@ -87,17 +125,50 @@ public class TicketController {
         }
 
         Ticket updatedTicket = ticketRepository.save(ticket);
+
+        // Auto-notify the ticket owner
+        User ticketUser = updatedTicket.getUser();
+        String resourceName = updatedTicket.getResource() != null
+                ? updatedTicket.getResource().getName() : "Unknown Resource";
+        String newStatusUpper = status.toUpperCase();
+        String message;
+        switch (newStatusUpper) {
+            case "IN_PROGRESS":
+                message = "🔧 Your ticket for \"" + resourceName + "\" is now being worked on (IN PROGRESS).";
+                break;
+            case "RESOLVED":
+                message = "✅ Your ticket for \"" + resourceName + "\" has been RESOLVED!"
+                        + (notes != null && !notes.isBlank() ? " Note: " + notes : "");
+                break;
+            case "CLOSED":
+                message = "📋 Your ticket for \"" + resourceName + "\" has been CLOSED.";
+                break;
+            default:
+                message = "📋 Your ticket for \"" + resourceName + "\" status changed to: " + newStatusUpper;
+        }
+        sendNotification(ticketUser, message);
+
         return new ResponseEntity<>(updatedTicket, HttpStatus.OK);
     }
 
-    // 4. DELETE A TICKET (DELETE)
+    // 4. DELETE A TICKET (DELETE) — removes attachments first to avoid FK constraint errors
     @DeleteMapping("/{id}")
-    public ResponseEntity<HttpStatus> deleteTicket(@PathVariable Long id) {
+    public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
+        Optional<Ticket> ticketOpt = ticketRepository.findById(id);
+        if (ticketOpt.isEmpty()) {
+            return new ResponseEntity<>("Ticket not found", HttpStatus.NOT_FOUND);
+        }
         try {
+            // 1. Delete all file attachments linked to this ticket
+            List<TicketAttachment> attachments = attachmentRepository.findByTicket_TicketId(id);
+            attachmentRepository.deleteAll(attachments);
+
+            // 2. Now safe to delete the ticket itself
             ticketRepository.deleteById(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Failed to delete ticket: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
