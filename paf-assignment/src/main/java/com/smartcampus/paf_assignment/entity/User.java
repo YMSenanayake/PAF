@@ -6,49 +6,34 @@ import jakarta.persistence.*;
 @Table(name = "users") // "user" is a reserved word in some SQL versions, so we use "users"
 public class User {
 
-    @Id // This marks it as the Primary Key
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // This makes it auto-increment (1, 2, 3...)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
     private String fullName;
-    
-    @Column(unique = true) // Ensures no duplicate emails
+
+    @Column(unique = true)
     private String email;
-    
+
     private String role; // USER, ADMIN, TECHNICIAN
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true; // All new users are active by default
+
     // --- Getters and Setters ---
-    // (In Java, you need these so other parts of your app can read/write this data)
 
-    public Long getUserId() {
-        return userId;
-    }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
-    public String getFullName() {
-        return fullName;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 }

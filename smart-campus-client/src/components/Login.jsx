@@ -1,9 +1,20 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const [loginError, setLoginError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('error') === 'oauth_failed') {
+      setLoginError('Sign-in failed. Please try again or use a different account.');
+      // Clean the URL without reloading
+      window.history.replaceState({}, '', '/');
+    }
+  }, [location.search]);
 
   // Already logged in → skip login page entirely
   if (isAuthenticated) {
@@ -91,6 +102,17 @@ const Login = () => {
               Sign in to manage bookings, resources & maintenance
             </p>
           </div>
+
+          {/* Error banner */}
+          {loginError && (
+            <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl text-sm"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4 shrink-0">
+                <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+              </svg>
+              {loginError}
+            </div>
+          )}
 
           {/* Divider */}
           <div className="flex items-center gap-4 mb-8">

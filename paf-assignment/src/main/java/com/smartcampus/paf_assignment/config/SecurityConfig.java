@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,21 +28,31 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // Custom resolver that forwards login_hint to Google (skips account chooser)
+        // Custom resolver that forwards login_hint/prompt params to Google
         CustomAuthorizationRequestResolver resolver =
             new CustomAuthorizationRequestResolver(clientRegistrationRepository);
 
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
-            // OAuth2 needs IF_REQUIRED so it can store the state parameter in a temp session
-            // JWT is still used for all subsequent API calls
+            // Always create a session so the OAuth2 state survives the Google round-trip
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+            )
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
+                // Custom resolver for login_hint / prompt params; Spring manages state storage
                 .authorizationEndpoint(endpoint -> endpoint
                     .authorizationRequestResolver(resolver)
                 )
                 .successHandler(oAuth2LoginSuccessHandler)
+                .failureHandler((request, response, exception) -> {
+                    // Print the REAL cause to the Spring console for debugging
+                    System.err.println("[OAuth2 FAILURE] "
+                        + exception.getClass().getName() + ": " + exception.getMessage());
+                    exception.printStackTrace(System.err);
+                    response.sendRedirect("http://localhost:3000/?error=oauth_failed");
+                })
             );
 
         return http.build();
@@ -52,7 +63,6 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        // Allow both common dev ports
         config.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000",
             "http://localhost:3001",

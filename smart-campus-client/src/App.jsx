@@ -10,6 +10,7 @@ import Bookings from './components/Bookings';
 import Tickets from './components/Tickets';
 import Notifications from './components/Notifications';
 import UserManagement from './components/admin/UserManagement';
+import BookingVerify from './components/admin/BookingVerify';
 import './App.css';
 
 function App() {
@@ -35,6 +36,12 @@ function App() {
             <Route path="users" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <UserManagement />
+              </ProtectedRoute>
+            } />
+            {/* Admin + Technician — booking verification */}
+            <Route path="verify" element={
+              <ProtectedRoute requiredRole="TECHNICIAN">
+                <BookingVerify />
               </ProtectedRoute>
             } />
           </Route>

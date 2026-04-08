@@ -5,9 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 const API = '/api/users';
 
 const roleColors = {
-  ADMIN:      { color: '#818cf8', bg: 'rgba(99,102,241,0.15)',  border: 'rgba(99,102,241,0.3)' },
-  TECHNICIAN: { color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   border: 'rgba(6,182,212,0.3)' },
-  USER:       { color: '#10b981', bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.3)' },
+  ADMIN: { color: '#818cf8', bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)' },
+  TECHNICIAN: { color: '#06b6d4', bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.3)' },
+  USER: { color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)' },
 };
 
 const UserManagement = () => {
@@ -57,9 +57,8 @@ const UserManagement = () => {
   return (
     <div className="p-8">
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-slide-in ${
-          toast.type === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'
-        }`}>{toast.type === 'success' ? '✓' : '✕'} {toast.text}</div>
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-slide-in ${toast.type === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'
+          }`}>{toast.type === 'success' ? '✓' : '✕'} {toast.text}</div>
       )}
 
       {/* Header */}
