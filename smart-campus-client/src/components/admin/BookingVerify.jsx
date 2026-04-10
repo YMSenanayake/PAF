@@ -62,7 +62,15 @@ const BookingVerify = () => {
     CHECKED_IN:  { color: '#6366f1', bg: 'rgba(99,102,241,0.15)',  border: 'rgba(99,102,241,0.3)',  icon: '📍' },
   };
 
+  /** Returns true if the booking's end date-time is already in the past */
+  const isExpired = (b) => {
+    if (!b?.bookingDate || !b?.endTime) return false;
+    const endDateTime = new Date(`${b.bookingDate}T${b.endTime}`);
+    return endDateTime < new Date();
+  };
+
   const sm = booking ? (statusMeta[booking.status] ?? statusMeta.PENDING) : null;
+  const expired = booking ? isExpired(booking) : false;
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
@@ -170,6 +178,28 @@ const BookingVerify = () => {
                   <p className="text-slate-400 text-xs">This booking has been successfully verified</p>
                 </div>
               </div>
+
+            ) : expired ? (
+              /* ── EXPIRED — block check-in ── */
+              <div className="flex items-center gap-3 px-4 py-4 rounded-xl"
+                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-red-400 font-bold text-sm">Booking Expired</p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    This booking ended on <strong className="text-slate-300">{booking.bookingDate}</strong> at{' '}
+                    <strong className="text-slate-300">{booking.endTime?.slice(0,5)}</strong>. Check-in is not allowed.
+                  </p>
+                </div>
+              </div>
+
             ) : booking.status === 'APPROVED' ? (
               <button id="confirm-checkin-btn" onClick={confirmCheckIn}
                 className="btn btn-primary w-full py-3 text-sm font-bold"

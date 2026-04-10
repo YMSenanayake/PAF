@@ -26,6 +26,9 @@ const Bookings = () => {
     resourceId: '', bookingDate: '', startTime: '', endTime: '', purpose: '', expectedAttendees: '',
   });
 
+  // Today's date in YYYY-MM-DD format — used as the minimum allowed booking date
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const showToast = (text, type = 'success') => {
     setToast({ text, type });
     setTimeout(() => setToast(null), 3500);
@@ -48,6 +51,22 @@ const Bookings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Reject bookings where the start time is already in the past
+    if (form.bookingDate && form.startTime) {
+      const startDateTime = new Date(`${form.bookingDate}T${form.startTime}`);
+      if (startDateTime < new Date()) {
+        showToast('Cannot book a date/time that has already passed.', 'error');
+        return;
+      }
+    }
+
+    // Reject end time before start time
+    if (form.startTime && form.endTime && form.endTime <= form.startTime) {
+      showToast('End time must be after start time.', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await axios.post(`${API}/bookings`, {
@@ -201,6 +220,7 @@ const Bookings = () => {
             <div>
               <label className="form-label">Date</label>
               <input id="booking-date" type="date" className="form-input" required
+                min={todayStr}
                 value={form.bookingDate} onChange={e => setForm({ ...form, bookingDate: e.target.value })} />
             </div>
             <div>

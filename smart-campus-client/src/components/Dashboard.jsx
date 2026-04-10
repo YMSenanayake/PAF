@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 /* ─── Dashboard ──────────────────────────────────── */
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isTechnician } = useAuth();
   const [resources, setResources]     = useState([]);
   const [bookings, setBookings]       = useState([]);
   const [tickets, setTickets]         = useState([]);
@@ -49,12 +49,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     const load = async () => {
+      if (!user?.userId) return;
       try {
-        const userId = user?.userId ?? 1;
+        const userId = user.userId;
+        const isStaff = isAdmin || isTechnician;
+
         const [r, b, t, n] = await Promise.all([
           axios.get('/api/resources'),
-          axios.get('/api/bookings'),
-          axios.get('/api/tickets'),
+          // Staff sees all; regular USER sees only their own
+          isStaff ? axios.get('/api/bookings') : axios.get(`/api/bookings/user/${userId}`),
+          isStaff ? axios.get('/api/tickets')  : axios.get(`/api/tickets/user/${userId}`),
           axios.get(`/api/notifications/user/${userId}/unread`),
         ]);
         setResources(r.data);
@@ -68,7 +72,7 @@ const Dashboard = () => {
       }
     };
     load();
-  }, []);
+  }, [user?.userId, isAdmin, isTechnician]);
 
   /* ── derived stats ── */
   const pendingBookings = bookings.filter(b => b.status === 'PENDING').length;
