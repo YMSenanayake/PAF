@@ -91,11 +91,28 @@ const Dashboard = () => {
   ].filter(d => d.value > 0);
 
   const bookingTrend = (() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map(d => ({
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Build a map: dayName -> { bookings, resolved }
+    const map = {};
+    dayNames.forEach(d => { map[d] = { bookings: 0, resolved: 0 }; });
+
+    bookings.forEach(b => {
+      if (!b.bookingDate) return;
+      // Skip rejected / cancelled — they shouldn't appear as activity
+      if (b.status === 'REJECTED' || b.status === 'CANCELLED') return;
+      const dayIndex = new Date(b.bookingDate).getDay(); // 0=Sun … 6=Sat
+      const dayName  = dayNames[dayIndex];
+      map[dayName].bookings += 1;
+      if (b.status === 'APPROVED' || b.status === 'COMPLETED') {
+        map[dayName].resolved += 1;
+      }
+    });
+
+    // Return Mon–Sun order
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => ({
       day: d,
-      bookings: Math.floor(Math.random() * 8) + 1,
-      resolved: Math.floor(Math.random() * 5),
+      bookings: map[d].bookings,
+      resolved: map[d].resolved,
     }));
   })();
 
@@ -243,7 +260,9 @@ const Dashboard = () => {
       {/* Area chart — booking trend */}
       <div className="glass rounded-2xl p-5 animate-fade-in-up" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
         <h2 className="text-sm font-semibold text-slate-300 mb-1">Weekly Activity</h2>
-        <p className="text-xs text-slate-500 mb-5">Bookings trend across the week</p>
+        <p className="text-xs text-slate-500 mb-5">
+          {isAdmin ? `All users' bookings across the week` : 'Your bookings across the week'}
+        </p>
         <div style={{ height: 180 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={bookingTrend} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
