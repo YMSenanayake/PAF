@@ -9,9 +9,12 @@ const Login = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('error') === 'oauth_failed') {
+    const error = params.get('error');
+    if (error === 'domain_restricted') {
+      setLoginError('Access denied. Only @my.sliit.lk accounts are allowed.');
+      window.history.replaceState({}, '', '/');
+    } else if (error === 'oauth_failed') {
       setLoginError('Sign-in failed. Please try again or use a different account.');
-      // Clean the URL without reloading
       window.history.replaceState({}, '', '/');
     }
   }, [location.search]);
@@ -151,9 +154,20 @@ const Login = () => {
             Sign in with Google
           </button>
 
+          {/* Domain hint */}
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+              className="w-3.5 h-3.5 shrink-0" style={{ color: '#6366f1' }}>
+              <circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" />
+            </svg>
+            <p className="text-xs" style={{ color: '#94a3b8' }}>
+              Only <span className="font-semibold" style={{ color: '#a5b4fc' }}>@my.sliit.lk</span> accounts are accepted
+            </p>
+          </div>
+
           {/* Footer note */}
-          <p className="text-center text-xs text-slate-500 mt-6">
-            Secured with Google OAuth 2.0 · University access only
+          <p className="text-center text-xs text-slate-500 mt-3">
+            Secured with Google OAuth 2.0 · SLIIT access only
           </p>
         </div>
 

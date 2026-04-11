@@ -38,7 +38,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            // 2. Check if they exist in our database. If not, auto-register them.
+            // 2a. Enforce @my.sliit.lk domain restriction
+            if (!email.endsWith("@my.sliit.lk")) {
+                System.err.println("[OAuth2] Rejected sign-in from unauthorized domain: " + email);
+                response.sendRedirect("http://localhost:3000/?error=domain_restricted");
+                return;
+            }
+
+            // 2b. Check if they exist in our database. If not, auto-register them.
             User user = userRepository.findByEmail(email);
             if (user == null) {
                 user = new User();
