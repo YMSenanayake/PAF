@@ -11,6 +11,7 @@ import Tickets from './components/Tickets';
 import Notifications from './components/Notifications';
 import UserManagement from './components/admin/UserManagement';
 import BookingVerify from './components/admin/BookingVerify';
+import NotificationPreferences from './components/NotificationPreferences';
 import './App.css';
 
 function App() {
@@ -44,6 +45,8 @@ function App() {
                 <BookingVerify />
               </ProtectedRoute>
             } />
+            {/* All users — notification preferences */}
+            <Route path="settings" element={<NotificationPreferences />} />
           </Route>
         </Routes>
       </Router>

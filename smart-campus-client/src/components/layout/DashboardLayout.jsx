@@ -3,13 +3,15 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { useNotificationPrefs, categorizeNotif } from '../../hooks/useNotificationPrefs';
 
 const DashboardLayout = () => {
   const { user } = useAuth();
+  const { prefs } = useNotificationPrefs();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [alertToasts, setAlertToasts] = useState([]); // live alert popups
+  const [alertToasts, setAlertToasts] = useState([]);
   const prevCountRef = useRef(0);
-  const knownIdsRef = useRef(new Set()); // track notification IDs already alerted
+  const knownIdsRef = useRef(new Set());
 
   const dismissToast = (id) =>
     setAlertToasts(prev => prev.filter(t => t.id !== id));
@@ -29,21 +31,25 @@ const DashboardLayout = () => {
         if (newOnes.length > 0 && prevCountRef.current > 0) {
           // Only alert if this isn't the very first load (avoid spamming on page refresh)
           newOnes.forEach((n, idx) => {
-            const toastId = n.notificationId;
-            setAlertToasts(prev => [...prev, { id: toastId, message: n.message }]);
-            // Auto-dismiss after 6 seconds
-            setTimeout(() => dismissToast(toastId), 6000 + idx * 500);
-          });
+            // Check category preference before showing toast
+            const cat = categorizeNotif(n.message);
+            const catEnabled = cat === null || prefs[cat] !== false;
 
-          // Browser native notification (if permission granted)
-          if ('Notification' in window && Notification.permission === 'granted') {
-            newOnes.forEach(n => {
+            if (prefs.inAppToasts && catEnabled) {
+              const toastId = n.notificationId;
+              setAlertToasts(prev => [...prev, { id: toastId, message: n.message }]);
+              setTimeout(() => dismissToast(toastId), 6000 + idx * 500);
+            }
+
+            // Browser native notification
+            if (prefs.browserNotifs && catEnabled &&
+                'Notification' in window && Notification.permission === 'granted') {
               new Notification('Smart Campus Hub', {
-                body: n.message.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''), // strip emoji for compat
+                body: n.message.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''),
                 icon: '/vite.svg',
               });
-            });
-          }
+            }
+          });
         }
 
         // Mark all current IDs as known so we don't re-alert them
