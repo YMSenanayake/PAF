@@ -16,6 +16,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null); // user object pending deletion
 
   const showToast = (text, type = 'success') => {
     setToast({ text, type });
@@ -44,6 +45,19 @@ const UserManagement = () => {
     } catch { showToast('Failed to update role', 'error'); }
   };
 
+  const deleteUser = async () => {
+    if (!confirmDelete) return;
+    try {
+      await axios.delete(`${API}/${confirmDelete.userId}`);
+      showToast(`${confirmDelete.fullName ?? 'User'} removed successfully`);
+      setUsers(prev => prev.filter(u => u.userId !== confirmDelete.userId));
+    } catch (err) {
+      showToast(err.response?.data || 'Failed to delete user', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
+
   const filtered = users.filter(u =>
     u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -59,6 +73,32 @@ const UserManagement = () => {
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-slide-in ${toast.type === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'
           }`}>{toast.type === 'success' ? '✓' : '✕'} {toast.text}</div>
+      )}
+
+      {/* ── Confirm Delete Modal ─────────────────── */}
+      {confirmDelete && (
+        <div className="modal-backdrop animate-fade-in" onClick={() => setConfirmDelete(null)}>
+          <div className="glass rounded-2xl p-7 w-full max-w-sm animate-fade-in-up"
+            style={{ border: '1px solid rgba(239,68,68,0.25)', boxShadow: '0 25px 60px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 className="text-base font-bold text-white text-center mb-1">Delete User</h3>
+            <p className="text-slate-400 text-xs text-center mb-5 leading-relaxed">
+              This will permanently remove <strong className="text-slate-200">{confirmDelete.fullName}</strong> and ALL their bookings, tickets &amp; notifications. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button className="btn btn-secondary flex-1" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-danger flex-1" onClick={deleteUser}>Delete User</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Header */}
@@ -112,7 +152,7 @@ const UserManagement = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th><th>User</th><th>Email</th><th>Current Role</th><th>Change Role</th>
+                  <th>ID</th><th>User</th><th>Email</th><th>Current Role</th><th>Change Role</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,6 +196,26 @@ const UserManagement = () => {
                             <option value="TECHNICIAN">TECHNICIAN</option>
                             <option value="ADMIN">ADMIN</option>
                           </select>
+                        )}
+                      </td>
+                      {/* Delete button */}
+                      <td onClick={e => e.stopPropagation()}>
+                        {isSelf ? (
+                          <span className="text-xs text-slate-600">—</span>
+                        ) : (
+                          <button
+                            id={`delete-user-${u.userId}`}
+                            title={`Remove ${u.fullName}`}
+                            className="btn btn-sm btn-danger px-2.5"
+                            onClick={() => setConfirmDelete(u)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                              strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                            </svg>
+                          </button>
                         )}
                       </td>
                     </tr>
