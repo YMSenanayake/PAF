@@ -2,7 +2,7 @@ package com.smartcampus.paf_assignment.controller;
 
 import com.smartcampus.paf_assignment.entity.Booking;
 import com.smartcampus.paf_assignment.entity.Ticket;
-import com.smartcampus.paf_assignment.entity.TicketAttachment;
+// import com.smartcampus.paf_assignment.entity.TicketAttachment;
 import com.smartcampus.paf_assignment.entity.User;
 import com.smartcampus.paf_assignment.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +18,16 @@ import java.util.Optional;
 @CrossOrigin("*")
 public class UserController {
 
-    @Autowired private UserRepository userRepository;
-    @Autowired private NotificationRepository notificationRepository;
-    @Autowired private BookingRepository bookingRepository;
-    @Autowired private TicketRepository ticketRepository;
-    @Autowired private TicketAttachmentRepository ticketAttachmentRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private NotificationRepository notificationRepository;
+    @Autowired
+    private BookingRepository bookingRepository;
+    @Autowired
+    private TicketRepository ticketRepository;
+    @Autowired
+    private TicketAttachmentRepository ticketAttachmentRepository;
 
     // 1. CREATE A USER (POST Request)
     @PostMapping("/register")
@@ -62,7 +67,7 @@ public class UserController {
     }
 
     // 5. DELETE A USER with full cascade (ADMIN only)
-    //    Order: notifications → ticket_attachments → tickets → bookings → user
+    // Order: notifications → ticket_attachments → tickets → bookings → user
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
@@ -72,13 +77,13 @@ public class UserController {
         try {
             // 1. Delete notifications
             notificationRepository.deleteAll(
-                notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(id));
+                    notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(id));
 
             // 2. Delete ticket attachments, then tickets
             List<Ticket> tickets = ticketRepository.findByUser_UserId(id);
             for (Ticket t : tickets) {
                 ticketAttachmentRepository.deleteAll(
-                    ticketAttachmentRepository.findByTicket_TicketId(t.getTicketId()));
+                        ticketAttachmentRepository.findByTicket_TicketId(t.getTicketId()));
             }
             ticketRepository.deleteAll(tickets);
 
