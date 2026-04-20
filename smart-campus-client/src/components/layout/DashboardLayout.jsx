@@ -55,7 +55,13 @@ const DashboardLayout = () => {
         // Mark all current IDs as known so we don't re-alert them
         notifications.forEach(n => knownIdsRef.current.add(n.notificationId));
         prevCountRef.current = count;
-        setUnreadCount(count);
+
+        // Only count unread notifications from *enabled* categories in the sidebar badge
+        const visibleUnread = notifications.filter(n => {
+          const cat = categorizeNotif(n.message);
+          return cat === null || prefs[cat] !== false;
+        }).length;
+        setUnreadCount(visibleUnread);
       } catch {
         // ignore — backend might not be running
       }

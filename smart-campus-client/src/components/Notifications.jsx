@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotificationPrefs, categorizeNotif } from '../hooks/useNotificationPrefs';
 
 const API = '/api/notifications';
 
 const Notifications = () => {
   const { user } = useAuth();
+  const { prefs } = useNotificationPrefs();
   const userId = user?.userId;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +51,16 @@ const Notifications = () => {
     showToast('All notifications marked as read');
   };
 
-  const filtered = filter === 'ALL' ? notifications : notifications.filter(n => !n.read);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Apply category preference filter first
+  const isCategoryEnabled = (n) => {
+    const cat = categorizeNotif(n.message);
+    return cat === null || prefs[cat] !== false;
+  };
+
+  const prefFiltered      = notifications.filter(isCategoryEnabled);
+  const hiddenByPrefs     = notifications.length - prefFiltered.length;
+  const filtered          = filter === 'ALL' ? prefFiltered : prefFiltered.filter(n => !n.read);
+  const unreadCount       = prefFiltered.filter(n => !n.read).length;
 
   const timeAgo = (dateStr) => {
     if (!dateStr) return '';
@@ -91,8 +102,8 @@ const Notifications = () => {
           <h1 className="text-2xl font-bold text-white">Notifications</h1>
           <p className="text-slate-400 text-sm mt-1">
             {unreadCount > 0
-              ? <><span className="text-indigo-400 font-semibold">{unreadCount} unread</span> · {notifications.length} total</>
-              : `${notifications.length} notifications · all caught up`}
+              ? <><span className="text-indigo-400 font-semibold">{unreadCount} unread</span> · {prefFiltered.length} visible</>
+              : `${prefFiltered.length} notifications · all caught up`}
           </p>
         </div>
         <div className="flex gap-3">
@@ -117,7 +128,7 @@ const Notifications = () => {
       {/* Filter tabs */}
       <div className="flex gap-2 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms', animationFillMode: 'both' }}>
         {[
-          { key: 'ALL', label: `All (${notifications.length})` },
+          { key: 'ALL',    label: `All (${prefFiltered.length})` },
           { key: 'UNREAD', label: `Unread (${unreadCount})` },
         ].map(({ key, label }) => (
           <button key={key}
@@ -132,6 +143,26 @@ const Notifications = () => {
           </button>
         ))}
       </div>
+
+      {/* Hidden-by-prefs hint */}
+      {hiddenByPrefs > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl mb-5 animate-fade-in"
+          style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.8"
+            strokeLinecap="round" className="w-4 h-4 shrink-0">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+          <p className="text-xs text-amber-400 flex-1">
+            <strong>{hiddenByPrefs}</strong> notification{hiddenByPrefs > 1 ? 's are' : ' is'} hidden by your preferences.
+          </p>
+          <Link to="/dashboard/settings"
+            className="text-xs text-amber-300 hover:text-amber-200 font-semibold underline underline-offset-2 shrink-0">
+            Manage Settings →
+          </Link>
+        </div>
+      )}
 
       {/* Notification list */}
       {loading ? (
