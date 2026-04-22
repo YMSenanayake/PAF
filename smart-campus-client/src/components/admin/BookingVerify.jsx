@@ -69,8 +69,16 @@ const BookingVerify = () => {
     return endDateTime < new Date();
   };
 
+  /** Returns true if the booking's start date-time is in the future */
+  const isTooEarly = (b) => {
+    if (!b?.bookingDate || !b?.startTime) return false;
+    const startDateTime = new Date(`${b.bookingDate}T${b.startTime}`);
+    return new Date() < startDateTime;
+  };
+
   const sm = booking ? (statusMeta[booking.status] ?? statusMeta.PENDING) : null;
   const expired = booking ? isExpired(booking) : false;
+  const tooEarly = booking ? isTooEarly(booking) : false;
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
@@ -196,6 +204,27 @@ const BookingVerify = () => {
                   <p className="text-slate-400 text-xs mt-0.5">
                     This booking ended on <strong className="text-slate-300">{booking.bookingDate}</strong> at{' '}
                     <strong className="text-slate-300">{booking.endTime?.slice(0,5)}</strong>. Check-in is not allowed.
+                  </p>
+                </div>
+              </div>
+
+            ) : tooEarly ? (
+              /* ── TOO EARLY — block check-in ── */
+              <div className="flex items-center gap-3 px-4 py-4 rounded-xl"
+                style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-amber-400 font-bold text-sm">Too Early for Check-in</p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    This booking starts on <strong className="text-slate-300">{booking.bookingDate}</strong> at{' '}
+                    <strong className="text-slate-300">{booking.startTime?.slice(0,5)}</strong>. Check-in is not allowed yet.
                   </p>
                 </div>
               </div>
