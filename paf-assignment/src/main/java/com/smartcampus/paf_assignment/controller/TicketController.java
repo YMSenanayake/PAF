@@ -12,7 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import com.smartcampus.paf_assignment.entity.TicketAttachment;
+import com.smartcampus.paf_assignment.entity.TicketComment;
 import com.smartcampus.paf_assignment.repository.TicketAttachmentRepository;
+import com.smartcampus.paf_assignment.repository.TicketCommentRepository;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +45,9 @@ public class TicketController {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private TicketCommentRepository commentRepository;
 
     private void sendNotification(User user, String message) {
         Notification notif = new Notification();
@@ -155,6 +160,43 @@ public class TicketController {
         return new ResponseEntity<>(updatedTicket, HttpStatus.OK);
     }
 
+    // 4.5. ASSIGN TICKET TO STAFF (PUT)
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<?> assignTicket(@PathVariable Long id, @RequestParam Long staffId, @RequestParam(required = false) Long assignedByUserId) {
+        Optional<Ticket> optionalTicket = ticketRepository.findById(id);
+        Optional<User> optionalStaff = userRepository.findById(staffId);
+
+        if (optionalTicket.isEmpty()) return new ResponseEntity<>("Ticket not found.", HttpStatus.NOT_FOUND);
+        if (optionalStaff.isEmpty()) return new ResponseEntity<>("Staff member not found.", HttpStatus.NOT_FOUND);
+
+        if (assignedByUserId != null) {
+            Optional<User> assignerOpt = userRepository.findById(assignedByUserId);
+            if (assignerOpt.isPresent() && !assignerOpt.get().getRole().equals("ADMIN")) {
+                return new ResponseEntity<>("Only admins can assign tickets.", HttpStatus.FORBIDDEN);
+            }
+        }
+
+        Ticket ticket = optionalTicket.get();
+        User staff = optionalStaff.get();
+
+        if (!staff.getRole().equals("TECHNICIAN")) {
+            return new ResponseEntity<>("Only technicians can be assigned.", HttpStatus.BAD_REQUEST);
+        }
+
+        ticket.setAssignedTo(staff);
+        Ticket updatedTicket = ticketRepository.save(ticket);
+
+        // Notify the reporter
+        String messageToReporter = "👷 Your ticket for \"" + ticket.getResource().getName() + "\" has been assigned to " + staff.getFullName() + ".";
+        sendNotification(ticket.getUser(), messageToReporter);
+
+        // Notify the staff if they didn't assign it to themselves (optional, handled on frontend if needed, but good practice here)
+        String messageToStaff = "📌 You have been assigned to Ticket #" + ticket.getTicketId() + " (" + ticket.getResource().getName() + ").";
+        sendNotification(staff, messageToStaff);
+
+        return new ResponseEntity<>(updatedTicket, HttpStatus.OK);
+    }
+
     // 4. DELETE A TICKET (DELETE) — removes attachments first to avoid FK constraint errors
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
@@ -222,5 +264,60 @@ public class TicketController {
         } catch (IOException e) {
             return new ResponseEntity<>("Error saving files: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // ── COMMENTS ──────────────────────────────────────────────────────────
+
+    // 6. GET ALL COMMENTS FOR A TICKET (GET)
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<TicketComment>> getTicketComments(@PathVariable Long id) {
+        return new ResponseEntity<>(commentRepository.findByTicket_TicketIdOrderByCreatedAtAsc(id), HttpStatus.OK);
+    }
+
+    // 7. ADD A COMMENT TO A TICKET (POST)
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<?> addComment(@PathVariable Long id, @RequestBody TicketComment commentRequest) {
+        Optional<Ticket> ticketOpt = ticketRepository.findById(id);
+        if (ticketOpt.isEmpty()) return new ResponseEntity<>("Ticket not found", HttpStatus.NOT_FOUND);
+        
+        Optional<User> userOpt = userRepository.findById(commentRequest.getUser().getUserId());
+        if (userOpt.isEmpty()) return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+
+        Ticket ticket = ticketOpt.get();
+        commentRequest.setTicket(ticket);
+        commentRequest.setUser(userOpt.get());
+
+        TicketComment savedComment = commentRepository.save(commentRequest);
+
+        // Notify the reporter if a staff member commented
+        if (!userOpt.get().getUserId().equals(ticket.getUser().getUserId())) {
+            String message = "💬 New comment on your ticket for \"" + ticket.getResource().getName() + "\" from " + userOpt.get().getFullName() + ".";
+            sendNotification(ticket.getUser(), message);
+        }
+
+        return new ResponseEntity<>(savedComment, HttpStatus.CREATED);
+    }
+
+    // 8. UPDATE A COMMENT (PUT)
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<?> updateComment(@PathVariable Long commentId, @RequestBody TicketComment commentRequest) {
+        Optional<TicketComment> existingOpt = commentRepository.findById(commentId);
+        if (existingOpt.isEmpty()) return new ResponseEntity<>("Comment not found", HttpStatus.NOT_FOUND);
+
+        TicketComment existing = existingOpt.get();
+        existing.setContent(commentRequest.getContent());
+        TicketComment updated = commentRepository.save(existing);
+
+        return new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+
+    // 9. DELETE A COMMENT (DELETE)
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId) {
+        Optional<TicketComment> existingOpt = commentRepository.findById(commentId);
+        if (existingOpt.isEmpty()) return new ResponseEntity<>("Comment not found", HttpStatus.NOT_FOUND);
+
+        commentRepository.deleteById(commentId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

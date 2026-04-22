@@ -28,6 +28,8 @@ public class UserController {
     private TicketRepository ticketRepository;
     @Autowired
     private TicketAttachmentRepository ticketAttachmentRepository;
+    @Autowired
+    private com.smartcampus.paf_assignment.repository.TicketCommentRepository ticketCommentRepository;
 
     // 1. CREATE A USER (POST Request)
     @PostMapping("/register")
@@ -79,15 +81,30 @@ public class UserController {
             notificationRepository.deleteAll(
                     notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(id));
 
-            // 2. Delete ticket attachments, then tickets
+            // 2. Delete comments made by the user
+            List<com.smartcampus.paf_assignment.entity.TicketComment> userComments = ticketCommentRepository.findAll()
+                    .stream().filter(c -> c.getUser().getUserId().equals(id)).toList();
+            ticketCommentRepository.deleteAll(userComments);
+
+            // 3. Unassign any tickets assigned to this user (if they are a staff member)
+            List<Ticket> assignedTickets = ticketRepository.findAll()
+                    .stream().filter(t -> t.getAssignedTo() != null && t.getAssignedTo().getUserId().equals(id)).toList();
+            for (Ticket t : assignedTickets) {
+                t.setAssignedTo(null);
+                ticketRepository.save(t);
+            }
+
+            // 4. Delete ticket attachments, comments on these tickets, then tickets
             List<Ticket> tickets = ticketRepository.findByUser_UserId(id);
             for (Ticket t : tickets) {
                 ticketAttachmentRepository.deleteAll(
                         ticketAttachmentRepository.findByTicket_TicketId(t.getTicketId()));
+                ticketCommentRepository.deleteAll(
+                        ticketCommentRepository.findByTicket_TicketIdOrderByCreatedAtAsc(t.getTicketId()));
             }
             ticketRepository.deleteAll(tickets);
 
-            // 3. Delete bookings
+            // 5. Delete bookings
             List<Booking> bookings = bookingRepository.findByUser_UserId(id);
             bookingRepository.deleteAll(bookings);
 

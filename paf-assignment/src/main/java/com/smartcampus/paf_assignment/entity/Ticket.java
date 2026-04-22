@@ -21,6 +21,11 @@ public class Ticket {
     @JoinColumn(name = "resource_id", nullable = false)
     private Resource resource;
 
+    // Staff member assigned to this ticket (optional)
+    @ManyToOne
+    @JoinColumn(name = "assigned_to_id")
+    private User assignedTo;
+
     private String category; // e.g., "HARDWARE", "SOFTWARE", "FACILITY"
     
     private String description;
@@ -51,6 +56,9 @@ public class Ticket {
 
     public Resource getResource() { return resource; }
     public void setResource(Resource resource) { this.resource = resource; }
+
+    public User getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
 
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
