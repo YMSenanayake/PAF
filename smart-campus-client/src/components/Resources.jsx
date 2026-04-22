@@ -10,7 +10,10 @@ const Resources = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', type: '', capacity: '', location: '', status: 'ACTIVE' });
+  const [filterType, setFilterType] = useState('ALL');
+  const [filterLocation, setFilterLocation] = useState('ALL');
+  const [minCapacity, setMinCapacity] = useState('');
+  const [form, setForm] = useState({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', status: 'ACTIVE' });
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,7 +39,7 @@ const Resources = () => {
       await axios.post(API, { ...form, capacity: parseInt(form.capacity) });
       showToast('Resource added successfully!');
       setShowModal(false);
-      setForm({ name: '', type: '', capacity: '', location: '', status: 'ACTIVE' });
+      setForm({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', status: 'ACTIVE' });
       load();
     } catch { showToast('Failed to add resource', 'error'); }
     finally { setSubmitting(false); }
@@ -60,11 +63,20 @@ const Resources = () => {
     } catch { showToast('Failed to delete resource', 'error'); }
   };
 
-  const filtered = resources.filter(r =>
-    r.name?.toLowerCase().includes(search.toLowerCase()) ||
-    r.type?.toLowerCase().includes(search.toLowerCase()) ||
-    r.location?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = resources.filter(r => {
+    const matchesSearch =
+      r.name?.toLowerCase().includes(search.toLowerCase()) ||
+      r.type?.toLowerCase().includes(search.toLowerCase()) ||
+      r.location?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesType = filterType === 'ALL' || r.type === filterType;
+    const matchesCapacity = !minCapacity || (r.capacity >= parseInt(minCapacity));
+    const matchesLocation = filterLocation === 'ALL' || r.location === filterLocation;
+
+    return matchesSearch && matchesType && matchesCapacity && matchesLocation;
+  });
+
+  const locations = Array.from(new Set(resources.map(r => r.location))).filter(Boolean);
 
   const typeIcon = (type) => {
     const t = type?.toLowerCase() ?? '';
@@ -79,9 +91,8 @@ const Resources = () => {
     <div className="p-8">
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-slide-in ${
-          toast.type === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'
-        }`}>
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-slide-in ${toast.type === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'
+          }`}>
           {toast.type === 'success' ? '✓' : '✕'} {toast.text}
         </div>
       )}
@@ -102,15 +113,43 @@ const Resources = () => {
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6 animate-fade-in-up" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-          className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-        </svg>
-        <input id="resource-search" type="text" placeholder="Search by name, type or location…"
-          value={search} onChange={e => setSearch(e.target.value)}
-          className="form-input pl-10" style={{ borderRadius: '12px' }} />
+      {/* Search & Filters */}
+      <div className="flex flex-col gap-4 mb-8 animate-fade-in-up" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+        <div className="relative">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+            className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input id="resource-search" type="text" placeholder="Search by name, type or location…"
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="form-input pl-10" style={{ borderRadius: '12px' }} />
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          <select className="form-input w-40" value={filterType} onChange={e => setFilterType(e.target.value)}>
+            <option value="ALL">All Types</option>
+            <option value="LECTURE_HALL">Lecture Hall</option>
+            <option value="LAB">Lab</option>
+            <option value="MEETING_ROOM">Meeting Room</option>
+            <option value="EQUIPMENT">Equipment</option>
+          </select>
+
+          <select className="form-input w-40" value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
+            <option value="ALL">All Locations</option>
+            {locations.map(loc => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Min Capacity"
+            className="form-input w-32"
+            value={minCapacity}
+            onChange={e => setMinCapacity(e.target.value)}
+            min="1"
+          />
+        </div>
       </div>
 
       {/* Grid */}
@@ -199,8 +238,13 @@ const Resources = () => {
                 </div>
                 <div>
                   <label className="form-label">Type</label>
-                  <input id="res-type" className="form-input" placeholder="e.g. Computer Lab" required
-                    value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
+                  <select id="res-type" className="form-input" required
+                    value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                    <option value="LECTURE_HALL">Lecture Hall</option>
+                    <option value="LAB">Lab</option>
+                    <option value="MEETING_ROOM">Meeting Room</option>
+                    <option value="EQUIPMENT">Equipment</option>
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
