@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/logo.png';
 
 const roleBadge = {
   ADMIN: { label: 'Admin', color: '#818cf8', bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)' },
@@ -103,12 +104,7 @@ const Sidebar = ({ unreadCount = 0 }) => {
 
       {/* Brand */}
       <div className="flex items-center gap-3 px-6 py-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #06b6d4)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-        </div>
+        <img src={logo} alt="Smart Campus Logo" className="w-9 h-9 object-contain" />
         <div>
           <p className="text-sm font-bold text-white leading-tight">Smart Campus</p>
           <p className="text-xs text-slate-400 leading-tight">Operations Hub</p>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const { isAuthenticated } = useAuth();
@@ -87,15 +88,7 @@ const Login = () => {
 
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-                boxShadow: '0 8px 32px rgba(99,102,241,0.5)',
-              }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <img src={logo} alt="Smart Campus Logo" className="w-20 h-20 object-contain drop-shadow-xl" />
           </div>
 
           {/* Heading */}
