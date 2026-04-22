@@ -143,6 +143,10 @@ public class TicketController {
             case "CLOSED":
                 message = "📋 Your ticket for \"" + resourceName + "\" has been CLOSED.";
                 break;
+            case "REJECTED":
+                message = "❌ Your ticket for \"" + resourceName + "\" has been REJECTED."
+                        + (notes != null && !notes.isBlank() ? " Reason: " + notes : "");
+                break;
             default:
                 message = "📋 Your ticket for \"" + resourceName + "\" status changed to: " + newStatusUpper;
         }

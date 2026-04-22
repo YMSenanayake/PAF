@@ -15,6 +15,8 @@ const ticketStatusClass = {
   OPEN: 'badge badge-open',
   IN_PROGRESS: 'badge badge-inprogress',
   RESOLVED: 'badge badge-resolved',
+  CLOSED: 'badge badge-closed',
+  REJECTED: 'badge badge-rejected',
 };
 
 const Tickets = () => {
@@ -169,6 +171,7 @@ const Tickets = () => {
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="RESOLVED">Resolved</option>
                   <option value="CLOSED">Closed</option>
+                  <option value="REJECTED">Rejected</option>
                 </select>
               </div>
               <div>
@@ -267,7 +270,7 @@ const Tickets = () => {
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-5 animate-fade-in-up" style={{ animationDelay: '80ms', animationFillMode: 'both' }}>
-        {['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'].map(s => (
+        {['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'].map(s => (
           <button key={s}
             onClick={() => setFilter(s)}
             className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 border ${
@@ -348,7 +351,7 @@ const Tickets = () => {
                         {(canResolveTickets || canDeleteTickets) && (
                           <td onClick={e => e.stopPropagation()}>
                             <div className="flex gap-2">
-                              {canResolveTickets && t.status !== 'RESOLVED' && (
+                              {canResolveTickets && !['CLOSED', 'REJECTED'].includes(t.status) && (
                                 <button className="btn btn-sm btn-secondary"
                                   onClick={() => { setResolveModal(t); setResolveData({ status: 'IN_PROGRESS', notes: t.resolutionNotes || '' }); }}>
                                   Update
